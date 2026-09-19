@@ -1,0 +1,167 @@
+# ============================================================
+# JOB SEARCH CONFIG — fill in and rename to config.yaml
+# ============================================================
+#
+# HOW TO USE THIS (with Claude Code):
+#   1. Copy this file to config.yaml
+#   2. Put your CV (PDF) in this same folder
+#   3. Open this folder with Claude Code and tell it:
+#        "Read my CV at ./my_cv.pdf and fill in config.yaml: suggest
+#         relevant companies (sources.ats.companies section), keywords
+#         from my stack with weights (scoring.stack_weights), and adjust
+#         the hard filters to my situation (seniority, location, exclusions)."
+#   4. Review what Claude filled in — you know your search better than
+#      anyone, this is a starting point, not a final result.
+#   5. Run: python main.py
+#
+# Every section marked "<- fill in" is one you need to complete yourself
+# (or ask Claude Code to suggest, then adjust).
+
+candidate:
+  name: "Your Name"
+  cv_path: "./my_cv.pdf"          # <- fill in
+
+# ------------------------------------------------------------
+# SOURCES TO ENABLE
+# ------------------------------------------------------------
+# Each source can be turned on/off independently.
+# Start with a few enabled and add more as needed — each one adds run time.
+
+sources:
+
+  # --- Official ATS (Greenhouse / Ashby / Lever) ---
+  # These are public APIs documented by each ATS provider.
+  # Legal, stable, no risk of being blocked. You need to know the
+  # company's "slug" (usually visible in their careers page URL,
+  # e.g. jobs.ashbyhq.com/anyone-ai -> the slug is "anyone-ai").
+  ats:
+    enabled: true
+    companies:               # <- fill in (or ask Claude to suggest)
+      # - slug: "anyone-ai"
+      #   boards: [ashby]              # which ATS to try for this company
+      # - slug: "notion"
+      #   boards: [greenhouse, lever]  # if unsure which they use, list all 3
+      #   boards: [greenhouse, ashby, lever]
+    requests_per_batch: 40   # how many parallel requests (raise with care)
+
+  # --- LinkedIn (public jobs-guest API, no login) ---
+  # ⚠️ WARNING: this scrapes the public LinkedIn endpoint used for SEO
+  # (no login required), but automated scraping of LinkedIn technically
+  # violates their Terms of Service. In practice:
+  #   - It's the same content a search engine sees when indexing LinkedIn (public)
+  #   - LinkedIn can block your IP if you make too many requests in a row
+  #   - Use it moderately (low max_requests, delays between requests)
+  #   - Don't enable this if you're running from a shared/corporate IP
+  # Leave it at `enabled: false` if you'd rather not take this risk.
+  linkedin:
+    enabled: false
+    keywords: []              # <- fill in, e.g. ["python developer", "junior developer"]
+    locations: []             # <- fill in, e.g. ["Argentina", "Remote", "LATAM"]
+    time_range_days: 7        # 1, 7 or 30 (smaller = fresher results)
+    experience_levels: []     # optional: ["1","2"] = entry+associate (see README for codes)
+    max_requests: 150         # hard cap on total LinkedIn requests for this run
+    delay_seconds: 0.3        # pause between requests (raise if you get blocked)
+
+  # --- Regional portals ---
+  # GetOnBoard has a public JSON API and IS IMPLEMENTED AND TESTED.
+  # The others (Computrabajo, Bumeran, ZonaJobs, Trabajo.org) are modern
+  # SPAs that don't expose postings in plain HTML — they need a real
+  # browser (Playwright/Selenium) to render JS. They're left as stubs in
+  # sources/regional.py with a note explaining exactly what's missing.
+  regional_portals:
+    getonboard:
+      enabled: false
+      countries: []            # <- fill in, e.g. ["argentina", "chile", "mexico"]
+      categories: ["programming"]   # see README for the full list of valid categories
+    computrabajo:
+      enabled: false            # NOT IMPLEMENTED — see sources/regional.py
+    bumeran:
+      enabled: false            # NOT IMPLEMENTED — see sources/regional.py
+    zonajobs:
+      enabled: false            # NOT IMPLEMENTED — see sources/regional.py
+    trabajo_org:
+      enabled: false            # NOT IMPLEMENTED — see sources/regional.py
+
+# ------------------------------------------------------------
+# HARD FILTERS — a posting that fails these is dropped, regardless of score
+# ------------------------------------------------------------
+filters:
+
+  # Seniority level. "ban_title_keywords" drops the posting if its TITLE
+  # contains any of these words (case-insensitive, simple regex).
+  seniority:
+    ban_title_keywords:        # <- fill in based on your situation
+      - "senior"
+      - "sr\\."
+      - "lead"
+      - "staff"
+      - "principal"
+      - "director"
+      - "manager"
+      - "chief"
+    require_junior_signal: false   # if true, REQUIRES the title to have junior/entry/trainee/etc
+    years_experience_max: null     # <- fill in, e.g. 3 (rejects postings asking for more years)
+
+  # Location and work mode
+  location:
+    mode: "remote_or_home_city"    # "remote_only" | "remote_or_home_city" | "any"
+    home_city: ""                  # <- fill in if you want anything there to pass regardless of mode
+    allowed_countries: []          # <- fill in, e.g. ["Argentina"] (empty = no country filter)
+    accept_scopes: ["global", "region", "country"]  # which kind of "remote" to accept
+    reject_hybrid: true
+    reject_onsite: true
+    banned_locations: []           # <- fill in, e.g. ["Brazil"]
+    geo_lock_reject: true          # rejects postings with "US only", "EU only", etc.
+
+  companies:
+    banned: []                     # <- fill in, e.g. ["CompanyX", "CompanyY"]
+
+  title_exclude_keywords: []       # <- fill in, e.g. ["sales", "marketing", "customer success"]
+  title_require_keywords: []       # if not empty, the title MUST contain at least one of these
+
+  # Postings already seen in previous runs — one URL per line.
+  # The script appends to this automatically after each run if you pass
+  # --save-blacklist, so future runs don't repeat results.
+  blacklist_urls_file: "./blacklist.txt"
+
+# ------------------------------------------------------------
+# SCORING — used to SORT what already passed the filters (doesn't drop anything)
+# ------------------------------------------------------------
+scoring:
+
+  # Keywords from your stack/domain and how many points they add if they
+  # appear in the posting's title or description. Ask Claude to suggest
+  # this from your CV — the idea is to weight more heavily whatever
+  # defines you best.
+  stack_weights: {}              # <- fill in
+    # python: 4
+    # fastapi: 6
+    # react: 4
+    # typescript: 4
+    # langchain: 5
+
+  # Technologies that SUBTRACT points if they show up (stacks you don't want)
+  negative_stack_weights: {}     # <- fill in (optional)
+    # php: -2
+    # wordpress: -3
+
+  # Location bonus (added based on which "loc_tag" the posting matched)
+  location_bonus:
+    home_city: 12
+    country_remote: 8
+    region_remote: 6
+    global_remote: 4
+
+  # Extra bonus if the title has a seniority signal you're looking for
+  title_bonus:
+    keywords: []                 # <- fill in, e.g. ["junior", "entry", "trainee"]
+    bonus: 6
+
+  top_n: 200                     # how many results to show in the final report
+
+# ------------------------------------------------------------
+# OUTPUT
+# ------------------------------------------------------------
+output:
+  format: "markdown"             # "markdown" | "csv" | "json"
+  path: "./results.md"

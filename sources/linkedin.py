@@ -1,17 +1,17 @@
 """
-Fetcher del endpoint público "jobs-guest" de LinkedIn (el mismo que usan
-los buscadores para indexar avisos, no requiere login).
+Fetcher for LinkedIn's public "jobs-guest" endpoint (the same one search
+engines use to index postings — no login required).
 
-⚠️  LEER ANTES DE ACTIVAR (linkedin.enabled: true en config.yaml):
-    El scraping automatizado de LinkedIn, aunque sea de contenido público
-    y sin login, va contra sus Términos de Servicio. En la práctica:
-      - Es de lectura únicamente, no hace login ni usa credenciales
-      - LinkedIn puede banear temporalmente tu IP si hacés demasiadas
-        requests en poco tiempo (por eso existen max_requests y delay_seconds
-        en la config — respetalos)
-      - No hay garantía de que este endpoint siga funcionando igual en el
-        futuro; LinkedIn lo cambia sin aviso
-    Usalo bajo tu propio criterio y responsabilidad.
+⚠️  READ BEFORE ENABLING (linkedin.enabled: true in config.yaml):
+    Automated scraping of LinkedIn, even of public, no-login content,
+    violates their Terms of Service. In practice:
+      - This is read-only; it doesn't log in or use any credentials
+      - LinkedIn can temporarily block your IP if you make too many
+        requests in a short time (that's what max_requests and
+        delay_seconds in the config are for — respect them)
+      - There's no guarantee this endpoint keeps working the same way in
+        the future; LinkedIn changes it without notice
+    Use it at your own discretion and responsibility.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from .ats import RawJob, USER_AGENT, TIMEOUT
 
 BASE = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 
-# f_TPR: r86400=1 día, r604800=7 días, r2592000=30 días
+# f_TPR: r86400=1 day, r604800=7 days, r2592000=30 days
 _TPR_MAP = {1: "r86400", 7: "r604800", 30: "r2592000"}
 
 
@@ -71,9 +71,10 @@ def fetch(
     pages_per_query: int = 1,
 ) -> list[RawJob]:
     """
-    Recorre keywords x locations (x páginas si pages_per_query > 1) contra
-    el endpoint guest de LinkedIn. Corta apenas llega a max_requests, así
-    tenés un techo duro sin importar cuántas combinaciones definiste.
+    Iterates keywords x locations (x pages if pages_per_query > 1) against
+    LinkedIn's guest endpoint. Stops as soon as it hits max_requests, so
+    you always have a hard cap regardless of how many combinations you
+    defined.
     """
     tpr = _TPR_MAP.get(time_range_days, "r604800")
     exp = ",".join(experience_levels) if experience_levels else None

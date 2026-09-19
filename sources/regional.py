@@ -1,21 +1,21 @@
 """
-Portales regionales (LATAM).
+Regional portals (LATAM).
 
-Estado de cada uno, honesto:
+Honest status of each one:
 
-  - GetOnBoard: IMPLEMENTADO Y PROBADO. Tiene una API JSON pública
-    (www.getonbrd.com/api/v0/...) que no requiere autenticación.
+  - GetOnBoard: IMPLEMENTED AND TESTED. Has a public JSON API
+    (www.getonbrd.com/api/v0/...) that doesn't require authentication.
 
-  - Computrabajo, Bumeran, ZonaJobs, Trabajo.org: NO IMPLEMENTADOS.
-    Los probamos en la sesión donde armamos esto y son SPAs (Angular/React)
-    modernas — el HTML que devuelve un curl/requests normal no contiene
-    los avisos, sólo el shell de la app. Para scrapearlos de verdad hace
-    falta un browser real (Playwright o Selenium) que ejecute el JS y
-    espere a que la lista cargue. Quedan como funciones que devuelven
-    NotImplementedError con instrucciones de qué falta, en vez de fallar
-    en silencio o devolver datos falsos.
+  - Computrabajo, Bumeran, ZonaJobs, Trabajo.org: NOT IMPLEMENTED.
+    We tried these while building this kit and they're modern
+    (Angular/React) SPAs — the HTML a plain curl/requests call returns
+    doesn't contain the postings, only the app shell. Scraping them for
+    real requires an actual browser (Playwright or Selenium) that runs
+    the JS and waits for the list to load. They're left as functions that
+    raise NotImplementedError with instructions on what's missing, rather
+    than failing silently or returning fake data.
 
-Categorías válidas de GetOnBoard (para `categories` en config.yaml):
+Valid GetOnBoard categories (for `categories` in config.yaml):
   programming, design, data-science-analytics, devops-sysadmin,
   qa-testing, mobile-developer, product, marketing, sales,
   customer-service, business-management, hr
@@ -26,22 +26,22 @@ import requests
 
 from .ats import RawJob, USER_AGENT, TIMEOUT
 
-GOB_SENIORITY_JUNIOR_IDS = {2, 3}   # 2=junior, 3=semi-senior (ver nota abajo)
+GOB_SENIORITY_JUNIOR_IDS = {2, 3}   # 2=junior, 3=semi-senior (see note below)
 GOB_MODALITY_REMOTE_ID = 2           # 1=hybrid, 2=fully_remote, 3=onsite
 
 
 def fetch_getonboard(countries: list[str], categories: list[str], only_remote: bool = True) -> list[RawJob]:
     """
-    NOTA sobre los IDs de seniority/modality: GetOnBoard no los expone como
-    texto en la respuesta, son IDs numéricos (1..5 para seniority, 1..3 para
-    modality) que dedujimos empíricamente mirando varios avisos conocidos.
-    Si notás que el filtro no está clasificando bien, revisá una respuesta
-    cruda de la API y ajustá estos sets.
+    Note on the seniority/modality IDs: GetOnBoard doesn't expose them as
+    text in the response, they're numeric IDs (1..5 for seniority, 1..3 for
+    modality) that we reverse-engineered by looking at several known
+    postings. If you notice the filter isn't classifying things correctly,
+    check a raw API response and adjust these sets.
     """
     out = []
     for country in countries:
         for cat in categories:
-            for page in range(1, 5):  # hasta 4 páginas por combinación
+            for page in range(1, 5):  # up to 4 pages per combination
                 url = (
                     f"https://www.getonbrd.com/api/v0/categories/{cat}/jobs"
                     f"?per_page=100&page={page}&country={country}"
@@ -80,29 +80,29 @@ def fetch_getonboard(countries: list[str], categories: list[str], only_remote: b
 def _not_implemented(name: str, what_it_needs: str):
     def _fn(*_args, **_kwargs):
         raise NotImplementedError(
-            f"{name} no está implementado en este kit. {what_it_needs}\n"
-            f"Si lo necesitás: escribí un fetcher en sources/regional.py que "
-            f"use Playwright (pip install playwright && playwright install chromium) "
-            f"para renderizar la página, esperar a que carguen los resultados, y "
-            f"extraer título/empresa/ubicación/URL de cada card. Podés pedirle a "
-            f"Claude Code que lo escriba mostrándole la URL de búsqueda del portal."
+            f"{name} is not implemented in this kit. {what_it_needs}\n"
+            f"If you need it: write a fetcher in sources/regional.py using "
+            f"Playwright (pip install playwright && playwright install chromium) "
+            f"to render the page, wait for the results to load, and extract "
+            f"title/company/location/URL from each card. You can ask Claude "
+            f"Code to write it for you by showing it the portal's search URL."
         )
     return _fn
 
 
 fetch_computrabajo = _not_implemented(
     "Computrabajo",
-    "Es una SPA; el listado de resultados se arma client-side con JS.",
+    "It's a SPA; the results list is built client-side with JS.",
 )
 fetch_bumeran = _not_implemented(
     "Bumeran",
-    "Misma situación que Computrabajo — requiere browser real.",
+    "Same situation as Computrabajo — needs a real browser.",
 )
 fetch_zonajobs = _not_implemented(
     "ZonaJobs",
-    "Misma situación — requiere browser real.",
+    "Same situation — needs a real browser.",
 )
 fetch_trabajo_org = _not_implemented(
     "Trabajo.org",
-    "Expone páginas de categoría pero no las cards de avisos individuales vía HTML plano.",
+    "Exposes category pages but not individual posting cards via plain HTML.",
 )

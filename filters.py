@@ -1,13 +1,17 @@
 """
-Filtros duros: un aviso que no pasa esto se descarta, sin importar el score.
+Hard filters: a posting that fails these is dropped, regardless of score.
 
-Toda la lógica de detección de "hybrid/presencial disfrazado de remote" y
-"geo-lock" viene de la sesión donde armamos esto originalmente: la primera
-versión del buscador confiaba en el resumen de LinkedIn (que dice "Remote"
-aunque el aviso real sea híbrido) y eso generó falsos positivos. La función
-`verify_remote_from_full_text` está para cuando tenés la descripción
-completa del aviso (no solo el resumen de búsqueda) — usala si podés pagar
-el costo de fetchear cada URL individualmente antes del filtrado final.
+All the "hybrid/on-site dressed up as remote" and "geo-lock" detection logic
+comes from real-world use: the first version of this scraper trusted
+LinkedIn's search summary (which says "Remote" even when the actual posting
+is hybrid) and that produced false positives. `verify_remote_from_full_text`
+is for when you have the posting's full description (not just the search
+summary) — use it if you can afford the cost of fetching each URL
+individually before the final filter pass.
+
+Note: the regexes below intentionally match both English and Spanish terms
+(e.g. "hybrid"/"híbrido", "remote"/"teletrabajo") since job postings can be
+in either language depending on the source.
 """
 from __future__ import annotations
 
@@ -194,11 +198,11 @@ def apply_filters(jobs: list[RawJob], cfg: FilterConfig) -> tuple[list[RawJob], 
 
 def verify_remote_from_full_text(job: RawJob, full_page_text: str) -> tuple[bool, str]:
     """
-    Verificación estricta usando el texto REAL de la página del aviso
-    (no el resumen de búsqueda). Fetcheá cada URL individualmente y pasale
-    el HTML/texto acá antes de confiar en el resultado — así evitás el
-    problema que tuvimos donde LinkedIn decía "remote" en el resumen pero
-    el aviso real era híbrido/presencial.
+    Strict verification using the REAL text of the posting's page (not the
+    search summary). Fetch each URL individually and pass its HTML/text
+    here before trusting the result — this avoids the problem where
+    LinkedIn's summary said "remote" but the actual posting was
+    hybrid/on-site.
     """
     blob = full_page_text.lower()
     if HYBRID_ONSITE_RE.search(blob) and not REMOTE_OVERRIDE_RE.search(blob):

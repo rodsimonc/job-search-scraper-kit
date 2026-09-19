@@ -1,6 +1,6 @@
 """
-Scoring: ordena lo que ya pasó los filtros duros. No descarta nada, solo
-define qué aparece primero en el reporte.
+Scoring: sorts whatever already passed the hard filters. It doesn't drop
+anything — it only decides what shows up first in the report.
 """
 from __future__ import annotations
 

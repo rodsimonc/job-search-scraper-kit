@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Buscador de empleo configurable — punto de entrada.
+Configurable job search kit — entry point.
 
-Uso:
-    python main.py                       # usa config.yaml en esta carpeta
-    python main.py --config otro.yaml    # usa otro archivo de config
-    python main.py --save-blacklist      # agrega las URLs de este resultado
-                                          # al blacklist_urls_file, para que
-                                          # la próxima corrida no las repita
+Usage:
+    python main.py                       # uses config.yaml in this folder
+    python main.py --config other.yaml   # uses a different config file
+    python main.py --save-blacklist      # appends this run's URLs to
+                                          # blacklist_urls_file, so the next
+                                          # run doesn't repeat them
 
-Requiere: pip install -r requirements.txt
+Requires: pip install -r requirements.txt
 """
 from __future__ import annotations
 
@@ -53,20 +53,20 @@ def collect_jobs(cfg: dict) -> list[RawJob]:
     if src.get("ats", {}).get("enabled"):
         companies = src["ats"].get("companies") or []
         if not companies:
-            print("[ats] enabled pero sin 'companies' en config.yaml — saltando", file=sys.stderr)
+            print("[ats] enabled but no 'companies' in config.yaml — skipping", file=sys.stderr)
         else:
-            print(f"[ats] buscando en {len(companies)} empresas...")
+            print(f"[ats] searching {len(companies)} companies...")
             batch = src["ats"].get("requests_per_batch", 40)
             found = ats.fetch_companies(companies, requests_per_batch=batch)
-            print(f"[ats] {len(found)} avisos encontrados")
+            print(f"[ats] {len(found)} postings found")
             jobs.extend(found)
 
     if src.get("linkedin", {}).get("enabled"):
         li = src["linkedin"]
         if not li.get("keywords") or not li.get("locations"):
-            print("[linkedin] enabled pero faltan 'keywords' o 'locations' — saltando", file=sys.stderr)
+            print("[linkedin] enabled but missing 'keywords' or 'locations' — skipping", file=sys.stderr)
         else:
-            print(f"[linkedin] buscando {len(li['keywords'])} keywords x {len(li['locations'])} ubicaciones...")
+            print(f"[linkedin] searching {len(li['keywords'])} keywords x {len(li['locations'])} locations...")
             found = linkedin.fetch(
                 keywords=li["keywords"],
                 locations=li["locations"],
@@ -75,18 +75,18 @@ def collect_jobs(cfg: dict) -> list[RawJob]:
                 max_requests=li.get("max_requests", 150),
                 delay_seconds=li.get("delay_seconds", 0.3),
             )
-            print(f"[linkedin] {len(found)} avisos encontrados")
+            print(f"[linkedin] {len(found)} postings found")
             jobs.extend(found)
 
     regional_cfg = src.get("regional_portals", {})
     if regional_cfg.get("getonboard", {}).get("enabled"):
         gob = regional_cfg["getonboard"]
-        print(f"[getonboard] buscando en {gob.get('countries')}...")
+        print(f"[getonboard] searching {gob.get('countries')}...")
         found = regional.fetch_getonboard(
             countries=gob.get("countries", []),
             categories=gob.get("categories", ["programming"]),
         )
-        print(f"[getonboard] {len(found)} avisos encontrados")
+        print(f"[getonboard] {len(found)} postings found")
         jobs.extend(found)
 
     for name, fn in [
@@ -106,12 +106,12 @@ def collect_jobs(cfg: dict) -> list[RawJob]:
 
 def write_markdown(scored: list[tuple[RawJob, int, list[str]]], jobs_total: int, kept_total: int, rejected: dict, path: str):
     lines = [
-        "# Resultados de búsqueda\n",
-        f"- Avisos crudos recolectados: **{jobs_total}**",
-        f"- Después de deduplicar + filtros: **{kept_total}**",
-        f"- Mostrados: **{len(scored)}**",
+        "# Search results\n",
+        f"- Raw postings collected: **{jobs_total}**",
+        f"- After dedup + filters: **{kept_total}**",
+        f"- Shown: **{len(scored)}**",
         "",
-        "## Motivos de rechazo",
+        "## Rejection reasons",
         "",
     ]
     for reason, count in sorted(rejected.items(), key=lambda x: -x[1]):
@@ -120,8 +120,8 @@ def write_markdown(scored: list[tuple[RawJob, int, list[str]]], jobs_total: int,
         "",
         "## Ranking",
         "",
-        "| # | Score | Título | Empresa | Ubicación | Fuente | URL |",
-        "|---|------:|--------|---------|-----------|--------|-----|",
+        "| # | Score | Title | Company | Location | Source | URL |",
+        "|---|------:|-------|---------|----------|--------|-----|",
     ]
     for i, (job, s, reasons) in enumerate(scored, 1):
         t = job.title[:60].replace("|", "\\|")
@@ -161,34 +161,34 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config.yaml")
     parser.add_argument("--save-blacklist", action="store_true",
-                         help="Agrega las URLs de este resultado al blacklist_urls_file")
+                         help="Append this run's URLs to blacklist_urls_file")
     args = parser.parse_args()
 
     if not Path(args.config).exists():
-        print(f"No encontré {args.config}. Copiá config.example.yaml a config.yaml y completalo primero.",
-              file=sys.stderr)
+        print(f"Couldn't find {args.config}. Copy config.example.en.yaml (or .es.yaml) to "
+              f"config.yaml and fill it in first.", file=sys.stderr)
         sys.exit(1)
 
     cfg = load_config(args.config)
 
     blacklist_path = cfg["filters"].get("blacklist_urls_file", "./blacklist.txt")
     blacklist = load_blacklist(blacklist_path)
-    print(f"Blacklist cargada: {len(blacklist)} URLs")
+    print(f"Loaded blacklist: {len(blacklist)} URLs")
 
     raw_jobs = collect_jobs(cfg)
-    print(f"\nTotal avisos crudos: {len(raw_jobs)}")
+    print(f"\nTotal raw postings: {len(raw_jobs)}")
 
     filter_cfg = filters_mod.FilterConfig.from_yaml(cfg, blacklist)
     kept, rejected = filters_mod.apply_filters(raw_jobs, filter_cfg)
-    print(f"Después de filtros: {len(kept)}")
+    print(f"After filters: {len(kept)}")
     for reason, count in sorted(rejected.items(), key=lambda x: -x[1])[:10]:
-        print(f"  rechazados por {reason}: {count}")
+        print(f"  rejected for {reason}: {count}")
 
     scored = scoring_mod.score_and_sort(kept, cfg)
 
     out = cfg.get("output", {})
     fmt = out.get("format", "markdown")
-    out_path = out.get("path", "./resultados.md")
+    out_path = out.get("path", "./results.md")
 
     if fmt == "markdown":
         write_markdown(scored, len(raw_jobs), len(kept), rejected, out_path)
@@ -197,16 +197,16 @@ def main():
     elif fmt == "json":
         write_json(scored, out_path)
     else:
-        print(f"Formato desconocido: {fmt}", file=sys.stderr)
+        print(f"Unknown format: {fmt}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"\nEscribí {len(scored)} resultados en {out_path}")
+    print(f"\nWrote {len(scored)} results to {out_path}")
 
     if args.save_blacklist:
         with open(blacklist_path, "a", encoding="utf-8") as f:
             for job, _, _ in scored:
                 f.write(job.url + "\n")
-        print(f"Agregué {len(scored)} URLs a {blacklist_path} para no repetirlas la próxima vez")
+        print(f"Added {len(scored)} URLs to {blacklist_path} so they won't repeat next time")
 
 
 if __name__ == "__main__":

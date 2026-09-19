@@ -1,17 +1,17 @@
 """
-Fetchers para APIs públicas de ATS (Greenhouse, Ashby, Lever).
+Fetchers for public ATS APIs (Greenhouse, Ashby, Lever).
 
-Estas tres son APIs documentadas, pensadas para que cualquiera pueda
-listar los avisos públicos de una empresa sin autenticación. No hay
-scraping de HTML acá, son endpoints JSON estables.
+These three are documented APIs, meant so anyone can list a company's
+public job postings without authentication. No HTML scraping here — these
+are stable JSON endpoints.
 
-Cómo encontrar el "slug" de una empresa:
-  - Greenhouse: la URL de careers suele ser boards.greenhouse.io/<slug>
-    o job-boards.greenhouse.io/<slug>
+How to find a company's "slug":
+  - Greenhouse: their careers URL is usually boards.greenhouse.io/<slug>
+    or job-boards.greenhouse.io/<slug>
   - Ashby: jobs.ashbyhq.com/<slug>
   - Lever: jobs.lever.co/<slug>
-Si no estás seguro, probá los tres — el que no aplique devuelve una
-lista vacía o un 404, no rompe nada.
+If you're not sure, try all three — whichever doesn't apply just returns
+an empty list or a 404, it won't break anything.
 """
 from __future__ import annotations
 
@@ -110,7 +110,7 @@ def fetch_lever(slug: str) -> list[RawJob]:
             location=loc or "Not specified",
             url=job.get("hostedUrl") or job.get("applyUrl") or "",
             description=f"{cat.get('team', '')} | {cat.get('commitment', '')}",
-            posted="",  # Lever da un timestamp en ms bajo 'createdAt' si lo querés parsear
+            posted="",  # Lever provides a ms timestamp under 'createdAt' if you want to parse it
             tags=[cat.get("team", "")],
         ))
     return out
@@ -121,9 +121,9 @@ FETCHERS = {"greenhouse": fetch_greenhouse, "ashby": fetch_ashby, "lever": fetch
 
 def fetch_companies(companies: list[dict], requests_per_batch: int = 40) -> list[RawJob]:
     """
-    companies: [{"slug": "anyone-ai", "boards": ["ashby"]}, ...]
-    Corre todas las combinaciones (empresa, board) en paralelo con un pool
-    limitado, para no saturar ni tu conexión ni el servidor remoto.
+    companies: [{"slug": "some-company", "boards": ["ashby"]}, ...]
+    Runs every (company, board) combination in parallel with a bounded
+    pool, so it doesn't overload your connection or the remote server.
     """
     tasks = []
     for c in companies:

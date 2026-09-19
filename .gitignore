@@ -1,6 +1,6 @@
-# Config y datos personales de cada usuario — NUNCA subir esto al repo.
-# Cada persona que clone el kit genera los suyos localmente a partir de
-# config.example.yaml; son sus criterios de búsqueda, su CV y sus resultados.
+# Personal config and output — NEVER commit this.
+# Each user generates their own locally from config.example.*.yaml; these
+# are their search criteria, their CV, and their results.
 config.yaml
 *.pdf
 *.docx
@@ -8,6 +8,9 @@ blacklist.txt
 resultados.md
 resultados.csv
 resultados.json
+results.md
+results.csv
+results.json
 
 # Python
 __pycache__/
