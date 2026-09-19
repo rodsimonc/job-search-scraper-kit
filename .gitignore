@@ -1,0 +1,25 @@
+# Config y datos personales de cada usuario — NUNCA subir esto al repo.
+# Cada persona que clone el kit genera los suyos localmente a partir de
+# config.example.yaml; son sus criterios de búsqueda, su CV y sus resultados.
+config.yaml
+*.pdf
+*.docx
+blacklist.txt
+resultados.md
+resultados.csv
+resultados.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
